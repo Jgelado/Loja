@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Loja 3D Interativa - Mobile Ready</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body, html { margin:0; padding:0; overflow:hidden; width:100%; height:100%; background:#f5f5f5; }
+  .label {
+    position: absolute;
+    background: rgba(255,255,255,0.95);
+    padding: 4px 8px;
+    border: 1px solid #000;
+    font-family: sans-serif;
+    border-radius: 4px;
+    pointer-events: none;
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<script type="module">
+  import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js';
+  import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/controls/OrbitControls.js';
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(65, window.innerWidth/window.innerHeight, 0.1, 500);
+  camera.position.set(100,60,100);
+  camera.lookAt(0,5,0);
+
+  const renderer = new THREE.WebGLRenderer({antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  document.body.appendChild(renderer.domElement);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.screenSpacePanning = true;
+  controls.maxPolarAngle = Math.PI/2;
+  controls.enableZoom = true;
+
+  scene.add(new THREE.HemisphereLight(0xffffff,0x444444,1.2));
+
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(100,60),
+    new THREE.MeshPhongMaterial({color:0xeeeeee})
+  );
+  floor.rotation.x = -Math.PI/2;
+  scene.add(floor);
+
+  function createSector(x,y,z,w,h,d,color,name){
+    const material = new THREE.MeshPhongMaterial({color:color});
+    const box = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), material);
+    box.position.set(x,y,z);
+    box.userData = {name:name};
+    scene.add(box);
+
+    const div = document.createElement('div');
+    div.className = 'label';
+    div.innerText = name;
+    document.body.appendChild(div);
+    box.userData.labelDiv = div;
+
+    return box;
+  }
+
+  const setores = [
+    createSector(-35,5,-25,20,10,15,0xffe699,"ENTRADA & CAIXAS"),
+    createSector(-35,5,-5,20,10,15,0xc6efce,"FERRAMENTAS & ELÉTRICOS"),
+    createSector(-35,5,15,20,10,15,0xbdd7ee,"TINTAS & ACESSÓRIOS"),
+    createSector(-35,5,35,20,10,15,0xf9cb9c,"DEPÓSITO / APOIO"),
+    createSector(-5,5,-25,25,10,15,0xfff2cc,"BANHEIROS & GABINETES"),
+    createSector(-5,5,-5,25,10,15,0xead1dc,"LOUÇAS SANITÁRIAS"),
+    createSector(-5,5,20,25,10,25,0xf4cccc,"PORTAS & JANELAS"),
+    createSector(20,5,0,10,10,60,0xf0f0f0,"CORREDOR CENTRAL"),
+    createSector(50,5,25,45,10,30,0xd9d2e9,"PISOS & REVESTIMENTOS"),
+    createSector(50,5,-15,20,10,20,0xd0e0e3,"SHOWROOM COZINHAS"),
+    createSector(80,5,-15,25,10,20,0xe2efda,"CAFÉ / ÁREA CLIENTE")
+  ];
+
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  renderer.domElement.addEventListener('pointerdown', event=>{
+    pointer.x = (event.clientX/window.innerWidth)*2-1;
+    pointer.y = -(event.clientY/window.innerHeight)*2+1;
+    raycaster.setFromCamera(pointer,camera);
+    const intersects = raycaster.intersectObjects(setores);
+    if(intersects.length>0){
+      const setor = intersects[0].object;
+      alert("Setor: "+setor.userData.name);
+    }
+  });
+
+  function updateLabels(){
+    setores.forEach(s=>{
+      const vector = s.position.clone();
+      vector.project(camera);
+      const x = (vector.x*0.5+0.5)*window.innerWidth;
+      const y = (-vector.y*0.5+0.5)*window.innerHeight;
+      s.userData.labelDiv.style.left = `${x}px`;
+      s.userData.labelDiv.style.top = `${y}px`;
+    });
+  }
+
+  function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene,camera);
+    updateLabels();
+  }
+  animate();
+
+  window.addEventListener('resize',()=>{
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>
